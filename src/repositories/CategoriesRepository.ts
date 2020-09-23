@@ -1,4 +1,4 @@
-import { EntityRepository, Repository } from 'typeorm';
+import { EntityRepository, Repository, In } from 'typeorm';
 
 import Category from '../models/Category';
 
@@ -19,6 +19,46 @@ class CategoryRepository extends Repository<Category> {
     }
 
     return category;
+  }
+
+  private async createNewCategoires(
+    categoriesToCreate: string[],
+    categoriesFromDb: Category[],
+  ): Promise<Category[]> {
+    let newCategories: Category[] = [];
+    const existingCategoriesTitle = categoriesFromDb.map(
+      (category: Category) => category.title,
+    );
+    const getNewUniqueCategoires = categoriesToCreate
+      .filter(category => !existingCategoriesTitle.includes(category))
+      .filter((value, index, self) => self.indexOf(value) === index);
+
+    newCategories = this.create(
+      getNewUniqueCategoires.map(title => ({
+        title,
+      })),
+    );
+
+    await this.save(newCategories);
+
+    return newCategories;
+  }
+
+  public async getCategories(categories: string[]): Promise<Category[]> {
+    let categoriesFromDb: Category[] = [];
+    categoriesFromDb = await this.find({
+      where: {
+        title: In(categories),
+      },
+    });
+
+    const newCategories = await this.createNewCategoires(
+      categories,
+      categoriesFromDb,
+    );
+
+    const finalCategories = [...newCategories, ...categoriesFromDb];
+    return finalCategories;
   }
 }
 

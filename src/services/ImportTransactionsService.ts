@@ -9,7 +9,7 @@ import TransactionsRepository from '../repositories/TransactionsRepository';
 
 interface TransactionCSV {
   title: string;
-  type: 'income | outcome';
+  type: 'income' | 'outcome';
   value: number;
   category: string;
 }
@@ -32,37 +32,12 @@ class ImportTransactionsService {
       categories.push(category);
       transactions.push({ title, type, value, category });
     });
+
     await new Promise(resolve => parseCSV.on('end', resolve));
-    const existentCategories = await categoriesRepository.find({
-      where: {
-        title: In(categories),
-      },
-    });
-    const existentCategoriesTitles = existentCategories.map(
-      (category: Category) => category.title,
+
+    const finalCategories = await categoriesRepository.getCategories(
+      categories,
     );
-    const addCategoiresTitles = categories
-      .filter(category => !existentCategoriesTitles.includes(category))
-      .filter((value, index, self) => self.indexOf(value) === index);
-
-    const newCategories = categoriesRepository.create(
-      addCategoiresTitles.map(title => ({
-        title,
-      })),
-    );
-
-    await categoriesRepository.save(newCategories);
-
-    const finalCategories = [...newCategories, ...existentCategories];
-
-    const transactionsToCreate = transactions.map(transaction => ({
-      title: transaction.title,
-      type: transaction.type,
-      value: transaction.value,
-      category: finalCategories.find(
-        category => category.title === transaction.category,
-      ),
-    }));
 
     const createdTransactions = transactionsRepository.create(
       transactions.map(transaction => ({
