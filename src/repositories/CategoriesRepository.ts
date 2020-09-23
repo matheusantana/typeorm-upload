@@ -11,14 +11,14 @@ interface Balance {
 @EntityRepository(Category)
 class CategoryRepository extends Repository<Category> {
   public async getCategoryByTitle(title: string): Promise<Category> {
-    const category = await this.findOne({ where: { title } });
+    let category = await this.findOne({ where: { title } });
 
-    if (category) {
-      return category;
+    if (!category) {
+      category = this.create({ title });
+      await this.save(category);
     }
-    const createdCategory = this.create({ title: category });
-    this.save(createdCategory);
-    return createdCategory;
+
+    return category;
   }
 }
 
